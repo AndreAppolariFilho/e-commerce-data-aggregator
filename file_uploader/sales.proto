@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package salesstream;
+
+// Define the sales information service
+service SalesStreamer {
+  // Client streaming RPC to send sales information
+  rpc UploadSales(stream SalesRecord) returns (UploadSummary);
+}
+
+// Define a sales record (e.g., for a single sale)
+message SalesRecord {
+  string sale_id = 1;
+  string product_name = 2;
+  int32 quantity = 3;
+  float price = 4;
+  string date = 5;
+}
+
+// Response summary from server
+message UploadSummary {
+  int32 total_sales = 1;
+  float total_revenue = 2;
+  string message = 3;
+}
