@@ -3,6 +3,8 @@ from concurrent import futures
 import time
 import sales_pb2_grpc as pb2_grpc
 import sales_pb2 as pb2
+import sqlite3
+import os
 
 
 class SalesStreamerServicer(pb2_grpc.SalesStreamerServicer):
@@ -10,13 +12,23 @@ class SalesStreamerServicer(pb2_grpc.SalesStreamerServicer):
         total_sales = 0
         total_revenue = 0.0
 
+        conn = sqlite3.connect(os.environ.get("DB_URL", f'{os.path.join(os.getcwd(), "db", "store.db")}'))
+
+        cursor = conn.cursor()
+
         # Process each sale in the stream
         for sale in request_iterator:
+            cursor.execute('''
+                INSERT INTO sale (id, product_name, price, quantity, created_at) 
+                VALUES (?, ?, ?, ?, ?)
+            ''', (sale.sale_id, sale.product_name, sale.price, sale.quantity, sale.date))
+            conn.commit()
             print(f"Received sale: {sale.sale_id}, {sale.product_name}, "
                   f"Quantity: {sale.quantity}, Price: {sale.price}, Date: {sale.date}")
             total_sales += 1
             total_revenue += sale.quantity * sale.price
 
+        conn.close()
         # After all sales are processed, return a summary
         return pb2.UploadSummary(
             total_sales=total_sales,
@@ -39,4 +51,20 @@ def serve():
 
 
 if __name__ == '__main__':
+    conn = sqlite3.connect(os.environ.get("DB_URL", f'{os.path.join(os.getcwd(), "db", "store.db")}'))
+
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sale (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_name TEXT NOT NULL,
+            price REAL(10, 2) NOT NULL,
+            quantity INT NOT NULL,
+            created_at DATETIME NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
     serve()
