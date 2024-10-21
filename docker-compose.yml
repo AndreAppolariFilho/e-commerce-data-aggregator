@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  data_aggregation:
+    build:
+      context: ./data-aggregation
+      dockerfile: Dockerfile
+    ports:
+      - 5003:5003
+      - 50051:50051
+    volumes:
+      - ./data-aggregation/db:/app/db
+      - ./data-aggregation/run.sh:/usr/local/bin/run.sh
+  file_uploader:
+    build:
+      context: ./file_uploader
+      dockerfile: Dockerfile
+    ports:
+      - 5002:5002
+    depends_on:
+      - data_aggregation
+    volumes:
+      - ./file_uploader/db:/app/db
